@@ -106,7 +106,7 @@ class Translator {
             if (!$existingTranslation) {
                 $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
                 $dataHandler->start([], []);
-                $localizedUid = $dataHandler->localize($table, $recordUid, $languageId);
+                $localizedUid = $dataHandler->localize($table, $recordUid, (int)$languageId);
             } else {
                 $localizedUid = $existingTranslation['uid'];
             }
@@ -134,7 +134,7 @@ class Translator {
                         if (empty($referenceTranslation)) {
                             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
                             $dataHandler->start([], []);
-                            $translatedSysFileReferenceUid = $dataHandler->localize('sys_file_reference', $referenceUid, $languageId);
+                            $translatedSysFileReferenceUid = $dataHandler->localize('sys_file_reference', $referenceUid, (int)$languageId);
 
                             Records::updateRecord(
                                 'sys_file_reference', 
