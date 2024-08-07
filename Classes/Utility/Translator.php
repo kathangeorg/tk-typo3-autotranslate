@@ -152,6 +152,12 @@ class Translator {
                             $recordSysFileReference = $parentObject->datamap['sys_file_reference'][$referenceUid] ?? Records::getRecord('sys_file_reference', $referenceUid);
                             $translatedColumns = $this->translateRecordProperties($recordSysFileReference, (int)$languageId, $columnsSysFileLanguage);
                             if (count($translatedColumns)) {
+                                
+                                // $translatedColumns = array_merge(
+                                //     $translatedColumns,
+                                //     $this->getLanguageDiffsource($recordSysFileReference, $referenceTranslation, $columnsSysFileLanguage)
+                                // );
+
                                 Records::updateRecord('sys_file_reference', $translatedSysFileReferenceUid, $translatedColumns);
                             }
                         }
@@ -159,9 +165,17 @@ class Translator {
                 }
             }
 
-
             // Translate properties with given service
             $translatedColumns = $this->translateRecordProperties($record, (int)$languageId, $columns);
+
+            // // Update language diffsource for translated fields
+            // $translatedColumns = array_merge(
+            //     $translatedColumns,
+            //     $this->getLanguageDiffsource(
+            //         $record, 
+            //         Records::getRecordTranslation($table, $recordUid, (int)$languageId), 
+            //         $columns)
+            // );
 
             Records::updateRecord($table, $localizedUid, $translatedColumns);
 
@@ -173,6 +187,50 @@ class Translator {
         Records::updateRecord($table, $recordUid, [
             self::AUTOTRANSLATE_LAST => time()
         ]);
+
+    }
+
+    protected function getLanguageDiffsource($record, $localizedRecord, $columnNames)
+    {
+        $languageDiffsourceFieldname = array_key_exists('l18n_diffsource', $localizedRecord) ? 'l18n_diffsource' : 'l10n_diffsource';
+        
+        $ocalizedRecordLanguageDiffsource =  json_decode($localizedRecord[$languageDiffsourceFieldname], true);
+        
+        foreach ($columnNames as $key) {
+            $ocalizedRecordLanguageDiffsource[$key] = $record[$key];
+        }
+
+        return [
+            $languageDiffsourceFieldname => json_encode($ocalizedRecordLanguageDiffsource)
+        ];
+        
+    }
+
+    public function setL10nDiffsource($table, $recordUid, $languageId) {
+        
+        $record = Records::getRecord($table, $recordUid);
+        $translationRecord = Records::getRecordTranslation($table, $recordUid, (int)$languageId);
+
+        // Calculate the differences and update l10n_diffsource
+        $diffsourceArray = [];
+        foreach ($record as $field => $value) {
+            if (isset($translationRecord[$field]) && $translationRecord[$field] !== $value) {
+                $diffsourceArray[$field] = $value;
+            }
+        }
+
+        $columns = [];
+
+        switch (true) {
+            case array_key_exists('l18n_diffsource', $translationRecord):
+                $columns['l18n_diffsource'] = json_encode($diffsourceArray);
+                break;
+            default:
+                $columns['l10n_diffsource'] = json_encode($diffsourceArray);
+                break;
+        }
+
+        Records::updateRecord($table, (int)$translationRecord['uid'], $columns);
 
     }
 
